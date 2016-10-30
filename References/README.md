@@ -1,5 +1,4 @@
 ##Compilation Instructions
-==========================================
 
 Use the following to compile and generate the required pdf:
 
