@@ -22,7 +22,8 @@ class Caption_Generator():
             self.features = self.features[self.idx]
             self.batch_iter=self.get_next_batch()
         else:
-            load()
+            #load()
+            pass
         self.max_words = np.int(len(self.wtoidx))
         self.model()
 
