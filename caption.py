@@ -111,8 +111,10 @@ class Caption_Generator():
 
         loss = loss / tf.reduce_sum(self.inp_dict["mask"][:,1:])
         return loss, self.inp_dict
+    
 
     def build_decode_graph(self):
+        ##TODO
         image_features = tf.placeholder(tf.float32, [1, self.dim_imgft])
 
     def get_next_batch(self):
