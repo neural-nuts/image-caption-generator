@@ -8,11 +8,34 @@ import os
 
 img_path="Dataset/flickr30k-images/"
 files=os.listdir("Dataset/flickr30k-images/")
-synset = [l.strip() for l in open('Dataset/synset.txt').readlines()]
 
 offset=0
 batch_size=10
 n_batch=len(files)/batch_size
+
+with open('CNNs/inception_v4.pb', 'rb') as f:
+    fileContent = f.read()
+
+graph_def = tf.GraphDef()
+graph_def.ParseFromString(fileContent)
+tf.import_graph_def(graph_def)
+graph = tf.get_default_graph()
+tensors = [n.name for n in tf.get_default_graph().as_graph_def().node]
+print "graph loaded from disk\n\n"
+
+def load_image(path):
+    img = skimage.io.imread(path)
+    #imshow(Image.open(path,'r'))
+    img = img / 255.0
+    assert (0 <= img).all() and (img <= 1.0).all()
+    #crop image from center
+    short_edge = min(img.shape[:2])
+    yy = int((img.shape[0] - short_edge) / 2)
+    xx = int((img.shape[1] - short_edge) / 2)
+    crop_img = img[yy : yy + short_edge, xx : xx + short_edge]
+    resized_img = skimage.transform.resize(crop_img, (299, 299, 3))
+    return resized_img
+
 
 def load_next_batch():
     global offset
@@ -33,24 +56,6 @@ def load_next_batch():
     offset+=1
     return batch
 
-def print_prob(probs):
-    for i, prob in enumerate(probs):
-        print files[i]
-        pred = np.argsort(prob)[::-1]
-        top1 = synset[pred[0]-1]
-        print "Top Prediction", top1
-        top5 = [synset[pred[i]-1] for i in range(5)]
-        print "Top 5 Prediction: ", top5
-
-with open('CNNs/inception_v4.pb', 'rb') as f:
-    fileContent = f.read()
-
-graph_def = tf.GraphDef()
-graph_def.ParseFromString(fileContent)
-tf.import_graph_def(graph_def)
-graph = tf.get_default_graph()
-tensors = [n.name for n in tf.get_default_graph().as_graph_def().node]
-print "graph loaded from disk\n\n"
 
 def forward_pass():
     with tf.Session() as sess:
@@ -72,5 +77,19 @@ def forward_pass():
     print "Saving Features : features.np\n"
     np.save('features',prob)
 
-forward_pass()
-print "done"
+def get_features(path):
+    image = load_image(path)
+    with tf.Session() as sess:
+        init = tf.global_variables_initializer()
+        sess.run(init)
+        print image.shape
+        image = image.reshape((1, 299, 299, 3))
+        assert image.shape == (1, 299, 299, 3)
+        feed_dict = {graph.get_tensor_by_name("import/InputImage:0"): image}
+        prob_tensor = graph.get_tensor_by_name("import/InceptionV4/Logits/AvgPool_1a/AvgPool:0")
+        prob = sess.run(prob_tensor, feed_dict=feed_dict)
+    return prob
+
+if __name__ == "__main__":
+    forward_pass()
+    print "done"

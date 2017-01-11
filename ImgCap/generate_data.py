@@ -62,7 +62,7 @@ def load_features(feature_path):
     return features
 
 
-def generate_captions(wt, ml, cap_path, feat_path):
+def generate_captions(wt = 2, ml = 20, cap_path = 'Dataset/results_20130124.token', feat_path =  'Dataset/features.npy', mode = 'train'):
     global max_len, word_threshold
     max_len = ml
     word_threshold = wt
@@ -73,6 +73,8 @@ def generate_captions(wt, ml, cap_path, feat_path):
     captions = [caps.replace('\n','').split('\t')[1] for caps in data]
     df = preprocess_captions(filenames,captions)
     vocab, wtoidx, idxtow = generate_vocab(df)
+    if mode is 'test':
+        return wtoidx, idxtow
     df = pad_captions(df)
     features = load_features(feat_path)
     captions = np.array(df.caption)
