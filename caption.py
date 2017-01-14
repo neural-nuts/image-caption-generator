@@ -29,7 +29,7 @@ class Caption_Generator():
         self.max_len = max_len
         self.word_threshold = word_threshold
         self.mode = mode
-        self.learning_rate = 0.1
+        self.learning_rate = 0.001
         if self.mode == 'train':
             self.wtoidx, self.idxtow, self.features, self.captions = data
             self.idx = np.random.permutation(self.features.shape[0])
@@ -213,7 +213,7 @@ class Caption_Generator():
         global_step = tf.Variable(self.current_step, name='global_step', trainable=False)
         starter_learning_rate = self.learning_rate
         learning_rate = tf.train.exponential_decay(
-            starter_learning_rate, global_step, 1000, 0.95, staircase=True)
+            starter_learning_rate, global_step, 100000, 0.95, staircase=True)
         optimizer = tf.train.AdamOptimizer(learning_rate).minimize(
             self.loss, global_step=global_step)
 
@@ -242,9 +242,8 @@ class Caption_Generator():
                     feed_dict = self.create_feed_dict(
                         batch_Ids, batch_features, batch_mask)
                     step, _, current_loss = sess.run(run, feed_dict=feed_dict)
-                    #if step % 100 == 0:
-                    print epoch, ": Global Step:", step, "\tLoss: ", current_loss
-                    break
+                    if step % 100 == 0:
+                        print epoch, ": Global Step:", step, "\tLoss: ", current_loss
 
                 print
                 print "Epoch: ", epoch, "\tCurrent Loss: ", current_loss
