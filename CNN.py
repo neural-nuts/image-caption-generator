@@ -8,7 +8,8 @@ import os
 import matplotlib.pyplot as plt
 
 img_path = "Dataset/flickr30k-images/"
-files = sorted(np.array(os.listdir("Dataset/flickr30k-images/")))
+files = np.array(os.listdir("Dataset/flickr30k-images/"))
+files.sort()
 
 batch_size = 10
 n_batch = len(files) / batch_size
@@ -102,7 +103,6 @@ def get_features(path):
     return prob
 
 if __name__ == "__main__":
-    print "Pre-Processing Images"
     print "#Images:", len(files)
     print "Extracting Features"
     forward_pass()
