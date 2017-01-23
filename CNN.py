@@ -8,8 +8,7 @@ import os
 import matplotlib.pyplot as plt
 
 img_path = "Dataset/flickr30k-images/"
-files = np.array(os.listdir("Dataset/flickr30k-images/"))
-files.sort()
+files = sorted(np.array(os.listdir("Dataset/flickr30k-images/")))
 
 batch_size = 10
 n_batch = len(files) / batch_size
@@ -93,7 +92,6 @@ def get_features(path):
     with tf.Session() as sess:
         init = tf.global_variables_initializer()
         sess.run(init)
-        print image.shape
         image = image.reshape((1, 299, 299, 3))
         assert image.shape == (1, 299, 299, 3)
         feed_dict = {graph.get_tensor_by_name("import/InputImage:0"): image}

@@ -3,8 +3,11 @@ from random import shuffle
 from CNN import *
 import tensorflow as tf
 import numpy as np
+import pickle
 import sys
 import os
+
+tf.logging.set_verbosity(tf.logging.ERROR)
 
 
 class Caption_Generator():
@@ -14,7 +17,7 @@ class Caption_Generator():
             dim_imgft=1536,
             embedding_size=256,
             num_hidden=256,
-            batch_size=100,
+            batch_size=50,
             num_timesteps=22,
             data=None,
             mode='train',
@@ -30,35 +33,34 @@ class Caption_Generator():
         self.word_threshold = word_threshold
         self.mode = mode
         self.learning_rate = 0.001
+        self.resume = resume
+
         if self.mode == 'train':
-            self.wtoidx, self.idxtow, self.features, self.captions = data
-            self.idx = np.random.permutation(self.features.shape[0])
+            self.vocab, self.wtoidx, self.features, self.captions = data
             self.num_batch = int(self.features.shape[0]) / self.batch_size
+            pickle.dump(self.wtoidx, open("Dataset/wordmap", "wb"))
+            pickle.dump(self.vocab, open("Dataset/vocab", "wb"))
             print "Converting Captions to IDs"
             self.captions = self.Words_to_IDs(self.wtoidx, self.captions)
-
-        self.resume = resume
+            if self.resume == 1:
+                self.vocab = pickle.load(open("Dataset/vocab", 'rb'))
+                self.wtoidx = pickle.load(open("Dataset/wordmap", 'rb'))
 
         self.current_epoch = 0
         self.current_step = 0
         if self.resume is 1 or mode == 'test':
-            if os.path.isfile(
-                    'model/save.npy') and os.path.isfile('model/idx.npy'):
-                self.current_epoch, self.current_step = np.load("model/save.npy") #
-                self.idx = np.load("model/idx.npy")
+            if os.path.isfile('model/save.npy'):
+                self.current_epoch, self.current_step = np.load(
+                    "model/save.npy")
             else:
                 print "No Checkpoints, Restarting Training.."
                 self.resume = 0
-        if self.mode == "train":
-            np.save("model/idx", self.idx)
         self.nb_epochs = 10000
-        if self.mode == 'train':
-            self.captions = self.captions[self.idx]
-            self.features = self.features[self.idx]
         if self.mode == 'test':
-            self.wtoidx, self.idxtow = generate_captions(
-                self.word_threshold, self.max_len, mode='test')
+            self.vocab = pickle.load(open("Dataset/vocab", 'rb'))
+            self.wtoidx = pickle.load(open("Dataset/wordmap", 'rb'))
         self.max_words = np.int(len(self.wtoidx))
+        self.idxtow = dict(zip(self.wtoidx.values(), self.wtoidx.keys()))
 
         self.model()
 
@@ -69,9 +71,18 @@ class Caption_Generator():
                 try:
                     cap.append(wtoidx[word])
                 except KeyError:
-                    cap.append(1)
+                    cap.append(wtoidx["<UNK>"])
             caption_batch[i] = np.array(cap)
         return np.vstack(caption_batch)
+
+    # From NeuralTalk by Andrej Karpathy
+    def bias_init(self):
+        bias_init_vector = np.array(
+            [1.0 * self.vocab[self.idxtow[i]] for i in self.idxtow])
+        bias_init_vector /= np.sum(bias_init_vector)
+        bias_init_vector = np.log(bias_init_vector)
+        bias_init_vector -= np.max(bias_init_vector)
+        return bias_init_vector
 
     def IDs_to_Words(self, idxtow, ID_batch):
         arr = []
@@ -99,10 +110,12 @@ class Caption_Generator():
             yield images_batch, caption_batch
 
     def assign_weights(self, dim1, dim2=None, name=None):
-        return tf.Variable(tf.random_uniform([dim1, dim2], -0.1, 0.1),
+        return tf.Variable(tf.truncated_normal([dim1, dim2]),
                            name=name)
 
-    def assign_biases(self, dim, name):
+    def assign_biases(self, dim, name, bias_init=False):
+        if bias_init:
+            return tf.Variable(self.bias_init().astype(np.float32), name=name)
         return tf.Variable(tf.zeros([dim]), name=name)
 
     def model(self):
@@ -131,7 +144,7 @@ class Caption_Generator():
                 'weight_target'),
             "biases": self.assign_biases(
                 self.max_words,
-                'bias_target')}
+                'bias_target', bias_init=True)}
 
         self.lstm_cell = tf.nn.rnn_cell.BasicLSTMCell(self.num_hidden,
                                                       state_is_tuple=False)
@@ -160,7 +173,7 @@ class Caption_Generator():
         with tf.variable_scope("LSTM"):
             output, state = self.lstm_cell(image_emb, initial_state)
             loss = 0.0
-            for i in range(1, self.num_timesteps):  # maxlen + 1
+            for i in range(1, self.num_timesteps):
                 batch_embed = tf.nn.embedding_lookup(
                     self.word_embedding['weights'], self.inp_dict['captions'][
                         :, i - 1]) + self.word_embedding['biases']
@@ -191,18 +204,18 @@ class Caption_Generator():
         IDs = []
         with tf.variable_scope("LSTM"):
             output, state = self.lstm_cell(image_emb, initial_state)
-            last_word = tf.nn.embedding_lookup(
+            pred_ID = tf.nn.embedding_lookup(
                 self.word_embedding['weights'], [
                     self.wtoidx["<S>"]]) + self.word_embedding['biases']
-            for i in range(self.num_timesteps):
+            for i in range(self.num_timesteps - 2):
                 tf.get_variable_scope().reuse_variables()
-                output, state = self.lstm_cell(last_word, state)
+                output, state = self.lstm_cell(pred_ID, state)
                 logits = tf.matmul(output, self.target_word[
                                    "weights"]) + self.target_word["biases"]
                 predicted_next_idx = tf.argmax(logits, axis=1)
-                last_word = tf.nn.embedding_lookup(
+                pred_ID = tf.nn.embedding_lookup(
                     self.word_embedding['weights'], predicted_next_idx)
-                last_word = last_word + self.word_embedding['biases']
+                pred_ID = pred_ID + self.word_embedding['biases']
                 IDs.append(predicted_next_idx)
         return image_features, IDs
 
@@ -210,7 +223,10 @@ class Caption_Generator():
         self.loss = loss
         self.inp_dict = inp_dict
         saver = tf.train.Saver(max_to_keep=10)
-        global_step = tf.Variable(self.current_step, name='global_step', trainable=False)
+        global_step = tf.Variable(
+            self.current_step,
+            name='global_step',
+            trainable=False)
         starter_learning_rate = self.learning_rate
         learning_rate = tf.train.exponential_decay(
             starter_learning_rate, global_step, 100000, 0.95, staircase=True)
@@ -234,6 +250,9 @@ class Caption_Generator():
                     sys.exit(0)
 
             for epoch in range(self.current_epoch, self.nb_epochs):
+                idx = np.random.permutation(self.features.shape[0])
+                self.captions = self.captions[idx]
+                self.features = self.features[idx]
                 batch_iter = self.get_next_batch()
                 for batch_idx in xrange(self.num_batch):
                     batch_features, batch_Ids = batch_iter.next()
@@ -251,8 +270,7 @@ class Caption_Generator():
                 saver.save(sess, "./model/model.ckpt", global_step=global_step)
                 np.save("model/save", (epoch, step))
 
-    def decode(self, path):
-        image_features, IDs = self.build_decode_graph()
+    def decode(self, image_features, IDs, path):
         saver = tf.train.Saver()
         ckpt_file = "./model/model.ckpt-" + str(self.current_step)
         with tf.Session() as sess:
@@ -262,4 +280,7 @@ class Caption_Generator():
             features = get_features(path)
             features = np.reshape(features, newshape=(1, 1536))
             caption_IDs = sess.run(IDs, feed_dict={image_features: features})
-            print self.IDs_to_Words(self.idxtow, caption_IDs)
+            sentence = " ".join(self.IDs_to_Words(self.idxtow, caption_IDs))
+            sentence = sentence.split("</S>")[0]
+            print "Caption:", sentence
+            print
