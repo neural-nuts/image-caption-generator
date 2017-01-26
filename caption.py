@@ -7,7 +7,6 @@ import pickle
 import sys
 import os
 
-tf.logging.set_verbosity(tf.logging.ERROR)
 
 
 class Caption_Generator():
@@ -75,14 +74,6 @@ class Caption_Generator():
             caption_batch[i] = np.array(cap)
         return np.vstack(caption_batch)
 
-    # From NeuralTalk by Andrej Karpathy
-    def bias_init(self):
-        bias_init_vector = np.array(
-            [1.0 * self.vocab[self.idxtow[i]] for i in self.idxtow])
-        bias_init_vector /= np.sum(bias_init_vector)
-        bias_init_vector = np.log(bias_init_vector)
-        bias_init_vector -= np.max(bias_init_vector)
-        return bias_init_vector
 
     def IDs_to_Words(self, idxtow, ID_batch):
         arr = []
@@ -108,6 +99,15 @@ class Caption_Generator():
             caption_batch = self.captions[batch_idx:batch_idx + batch_size]
             # print caption_batch
             yield images_batch, caption_batch
+
+    # From NeuralTalk by Andrej Karpathy
+    def bias_init(self):
+        bias_init_vector = np.array(
+            [1.0 * self.vocab[self.idxtow[i]] for i in self.idxtow])
+        bias_init_vector /= np.sum(bias_init_vector)
+        bias_init_vector = np.log(bias_init_vector)
+        bias_init_vector -= np.max(bias_init_vector)
+        return bias_init_vector
 
     def assign_weights(self, dim1, dim2=None, name=None):
         return tf.Variable(tf.truncated_normal([dim1, dim2]),
@@ -144,7 +144,7 @@ class Caption_Generator():
                 'weight_target'),
             "biases": self.assign_biases(
                 self.max_words,
-                'bias_target', bias_init=True)}
+                'bias_target')}
 
         self.lstm_cell = tf.nn.rnn_cell.BasicLSTMCell(self.num_hidden,
                                                       state_is_tuple=False)
@@ -207,7 +207,7 @@ class Caption_Generator():
             pred_ID = tf.nn.embedding_lookup(
                 self.word_embedding['weights'], [
                     self.wtoidx["<S>"]]) + self.word_embedding['biases']
-            for i in range(self.num_timesteps - 2):
+            for i in range(self.num_timesteps):
                 tf.get_variable_scope().reuse_variables()
                 output, state = self.lstm_cell(pred_ID, state)
                 logits = tf.matmul(output, self.target_word[
@@ -232,11 +232,15 @@ class Caption_Generator():
             starter_learning_rate, global_step, 100000, 0.95, staircase=True)
         optimizer = tf.train.AdamOptimizer(learning_rate).minimize(
             self.loss, global_step=global_step)
+        tf.scalar_summary("loss", self.loss)
+        tf.scalar_summary("learning_rate", learning_rate)
+        summary_op = tf.merge_all_summaries()
 
         with tf.Session() as sess:
             print "Initializing Training"
             init = tf.global_variables_initializer()
             sess.run(init)
+
             if self.resume is 1:
                 print "Loading Previously Trained Model"
                 print self.current_epoch, "Out of", self.nb_epochs, "Completed in previous run."
@@ -248,7 +252,7 @@ class Caption_Generator():
                     print str(e).split('\n')[0]
                     print "Checkpoints not found"
                     sys.exit(0)
-
+            writer = tf.train.SummaryWriter("model/log_dir/", graph=tf.get_default_graph())
             for epoch in range(self.current_epoch, self.nb_epochs):
                 idx = np.random.permutation(self.features.shape[0])
                 self.captions = self.captions[idx]
@@ -257,10 +261,11 @@ class Caption_Generator():
                 for batch_idx in xrange(self.num_batch):
                     batch_features, batch_Ids = batch_iter.next()
                     batch_mask = self.generate_mask(batch_Ids, self.wtoidx)
-                    run = [global_step, optimizer, self.loss]
+                    run = [global_step, optimizer, self.loss, summary_op]
                     feed_dict = self.create_feed_dict(
                         batch_Ids, batch_features, batch_mask)
-                    step, _, current_loss = sess.run(run, feed_dict=feed_dict)
+                    step, _, current_loss, summary = sess.run(run, feed_dict=feed_dict)
+                    writer.add_summary(summary, step)
                     if step % 100 == 0:
                         print epoch, ": Global Step:", step, "\tLoss: ", current_loss
 
@@ -281,6 +286,6 @@ class Caption_Generator():
             features = np.reshape(features, newshape=(1, 1536))
             caption_IDs = sess.run(IDs, feed_dict={image_features: features})
             sentence = " ".join(self.IDs_to_Words(self.idxtow, caption_IDs))
-            sentence = sentence.split("</S>")[0]
+            #sentence = sentence.split("</S>")[0]
             print "Caption:", sentence
             print
