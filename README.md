@@ -21,3 +21,6 @@ A Neural Network based generative model for captioning images.
 Show and Tell: A Neural Image Caption Generator
 
 -Oriol Vinyals, Alexander Toshev, Samy Bengio, Dumitru Erhan
+
+##License:
+Protected Under BSD-3 Clause License.
