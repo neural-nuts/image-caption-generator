@@ -286,6 +286,5 @@ class Caption_Generator():
             features = np.reshape(features, newshape=(1, 1536))
             caption_IDs = sess.run(IDs, feed_dict={image_features: features})
             sentence = " ".join(self.IDs_to_Words(self.idxtow, caption_IDs))
-            #sentence = sentence.split("</S>")[0]
-            print "Caption:", sentence
-            print
+            sentence = sentence.split("</S>")[0]
+            return sentence
