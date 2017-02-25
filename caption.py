@@ -1,4 +1,3 @@
-from ImgCap.generate_data import generate_captions
 from random import shuffle
 from CNN import *
 import tensorflow as tf
@@ -16,13 +15,14 @@ class Caption_Generator():
             dim_imgft=1536,
             embedding_size=256,
             num_hidden=256,
-            batch_size=50,
+            batch_size=100,
             num_timesteps=22,
             data=None,
             mode='train',
             word_threshold=2,
             max_len=20,
-            resume=0):
+            resume=0,
+            batch_decode=False):
         self.dim_imgft = np.int(dim_imgft)
         self.embedding_size = np.int(embedding_size)
         self.num_hidden = np.int(num_hidden)
@@ -31,23 +31,22 @@ class Caption_Generator():
         self.max_len = max_len
         self.word_threshold = word_threshold
         self.mode = mode
-        self.learning_rate = 0.001
+        self.learning_rate = 0.002
         self.resume = resume
 
         if self.mode == 'train':
             self.vocab, self.wtoidx, self.features, self.captions = data
             self.num_batch = int(self.features.shape[0]) / self.batch_size
-            pickle.dump(self.wtoidx, open("Dataset/wordmap", "wb"))
-            pickle.dump(self.vocab, open("Dataset/vocab", "wb"))
+
             print "Converting Captions to IDs"
             self.captions = self.Words_to_IDs(self.wtoidx, self.captions)
             if self.resume == 1:
-                self.vocab = pickle.load(open("Dataset/vocab", 'rb'))
-                self.wtoidx = pickle.load(open("Dataset/wordmap", 'rb'))
+                self.vocab = np.load("Dataset/vocab.npy").tolist()
+                self.wtoidx = np.load("Dataset/wordmap.npy").tolist()
 
         self.current_epoch = 0
         self.current_step = 0
-        if self.resume is 1 or mode == 'test':
+        if self.resume is 1 or self.mode == 'test':
             if os.path.isfile('model/save.npy'):
                 self.current_epoch, self.current_step = np.load(
                     "model/save.npy")
@@ -55,13 +54,22 @@ class Caption_Generator():
                 print "No Checkpoints, Restarting Training.."
                 self.resume = 0
         self.nb_epochs = 10000
+
         if self.mode == 'test':
-            self.vocab = pickle.load(open("Dataset/vocab", 'rb'))
-            self.wtoidx = pickle.load(open("Dataset/wordmap", 'rb'))
+            self.vocab = np.load("Dataset/vocab.npy").tolist()
+            self.wtoidx = np.load("Dataset/wordmap.npy").tolist()
+            self.max_words = np.int(len(self.wtoidx))
+            self.idxtow = dict(zip(self.wtoidx.values(), self.wtoidx.keys()))
+            self.model()
+            self.image_features, self.IDs = self.build_decode_graph()
+            if batch_decode == False:
+                self.sess = self.init_decode()
+                self.csess = init_CNN()
+            return
         self.max_words = np.int(len(self.wtoidx))
         self.idxtow = dict(zip(self.wtoidx.values(), self.wtoidx.keys()))
-
         self.model()
+
 
     def Words_to_IDs(self, wtoidx, caption_batch):
         for i, caption in enumerate(caption_batch):
@@ -76,13 +84,7 @@ class Caption_Generator():
 
 
     def IDs_to_Words(self, idxtow, ID_batch):
-        arr = []
-        for sent in ID_batch:
-            buf = ''
-            for word in sent:
-                buf += idxtow[word] + ' '
-            arr.append(buf.strip())
-        return arr
+        return [idxtow[word] for IDs in ID_batch for word in IDs]
 
     def generate_mask(self, ID_batch, wtoidx):
         nonpadded = map(lambda x: len(
@@ -198,8 +200,7 @@ class Caption_Generator():
 
     def build_decode_graph(self):
         image_features = tf.placeholder(tf.float32, [1, self.dim_imgft])
-        image_emb = tf.matmul(image_features, self.image_embedding[
-                              'weights']) + self.image_embedding['biases']
+        image_emb = tf.matmul(image_features, self.image_embedding['weights']) + self.image_embedding['biases']
         initial_state = tf.zeros([1, self.lstm_cell.state_size])
         IDs = []
         with tf.variable_scope("LSTM"):
@@ -275,16 +276,37 @@ class Caption_Generator():
                 saver.save(sess, "./model/model.ckpt", global_step=global_step)
                 np.save("model/save", (epoch, step))
 
-    def decode(self, image_features, IDs, path):
+    def init_decode(self):
         saver = tf.train.Saver()
         ckpt_file = "./model/model.ckpt-" + str(self.current_step)
+        sess = tf.Session()
+        init = tf.global_variables_initializer()
+        sess.run(init)
+        saver.restore(sess, ckpt_file)
+        return sess
+
+    def decode(self, path):
+        features = get_features(self.csess, path)
+        caption_IDs = self.sess.run(self.IDs, feed_dict={self.image_features: features})
+        sentence = " ".join(self.IDs_to_Words(self.idxtow, caption_IDs))
+        sentence = sentence.split("</S>")[0]
+        print "Caption:", sentence
+        print
+
+    def batch_decode(self, features):
+        saver = tf.train.Saver()
+        ckpt_file = "./model/model.ckpt-" + str(self.current_step)
+        sentences = []
         with tf.Session() as sess:
             init = tf.global_variables_initializer()
             sess.run(init)
             saver.restore(sess, ckpt_file)
-            features = get_features(path)
-            features = np.reshape(features, newshape=(1, 1536))
-            caption_IDs = sess.run(IDs, feed_dict={image_features: features})
-            sentence = " ".join(self.IDs_to_Words(self.idxtow, caption_IDs))
-            sentence = sentence.split("</S>")[0]
-            return sentence
+            for i, feat in enumerate(features[:100]):
+                feat = np.reshape(feat, newshape=(1, 1536))
+                caption_IDs = sess.run(self.IDs, feed_dict={self.image_features: feat})
+                sentence = " ".join(self.IDs_to_Words(self.idxtow, caption_IDs))
+                sentence = sentence.split("</S>")[0]
+                sentences.append(sentence)
+                if i%1000 == 0:
+                    print "Progress", i, "out of", features.shape[0]
+        return sentences

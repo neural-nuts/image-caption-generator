@@ -1,11 +1,9 @@
 import tensorflow as tf
 from PIL import Image
 import numpy as np
-import skimage
-import skimage.io
-import skimage.transform
+import cv2
 import os
-import matplotlib.pyplot as plt
+
 
 img_path = "Dataset/flickr30k-images/"
 files = sorted(np.array(os.listdir("Dataset/flickr30k-images/")))
@@ -20,17 +18,13 @@ graph_def = tf.GraphDef()
 graph_def.ParseFromString(fileContent)
 tf.import_graph_def(graph_def)
 graph = tf.get_default_graph()
-tensors = [n.name for n in tf.get_default_graph().as_graph_def().node]
-print "graph loaded from disk\n\n"
+output_layer = graph.get_tensor_by_name("import/InceptionV4/Logits/AvgPool_1a/AvgPool:0")
+input_layer = graph.get_tensor_by_name("import/InputImage:0")
 
-
-def load_image(path):
-    img = skimage.io.imread(path)
-    #fig = plt.figure()
-    # a=fig.add_subplot(1,2,1)
-    # x=skimage.io.imshow(img)
-    # a.set_title('Before')
-    # print img.shape
+'''
+def old_load_image(path):
+    img = Image.open(path)
+    img = np.array(img)
     img = img / 255.0
     assert (0 <= img).all() and (img <= 1.0).all()
     short_edge = min(img.shape[:2])
@@ -38,12 +32,32 @@ def load_image(path):
     xx = int((img.shape[1] - short_edge) / 2)
     crop_img = img[yy: yy + short_edge, xx: xx + short_edge]
     resized_img = skimage.transform.resize(crop_img, (299, 299, 3))
-    # a=fig.add_subplot(1,2,2)
-    # skimage.io.imshow(resized_img)
-    # x.set_clim(0.0,0.7)
-    # a.set_title('After')
-    # plt.show()
     return resized_img
+'''
+
+def load_image(x, new_h=299, new_w=299):
+    image = Image.open(x)
+    h, w = image.size
+    if image.format != "PNG":
+        image = np.asarray(image)/255.0
+    else:
+        image = np.asarray(image)/255.0
+        image = image[:,:,:3]
+    '''
+    ##To crop or not?
+    if w == h:
+        resized = cv2.resize(image, (new_h,new_w))
+    elif h < w:
+        resized = cv2.resize(image, (int(w * float(new_h)/h), new_w))
+        crop_length = int((resized.shape[1] - new_h) / 2)
+        resized = resized[:,crop_length:resized.shape[1] - crop_length]
+    else:
+        resized = cv2.resize(image, (new_h, int(h * float(new_w) / w)))
+        crop_length = int((resized.shape[0] - new_w) / 2)
+        resized = resized[crop_length:resized.shape[0] - crop_length,:]
+    '''
+    return cv2.resize(image, (new_h, new_w))
+
 
 
 def load_next_batch():
@@ -62,19 +76,16 @@ def forward_pass():
         for i in xrange(n_batch):
             batch = batch_iter.next()
             assert batch.shape == (batch_size, 299, 299, 3)
-            feed_dict = {graph.get_tensor_by_name(
-                "import/InputImage:0"): batch}
-            prob_tensor = graph.get_tensor_by_name(
-                "import/InceptionV4/Logits/AvgPool_1a/AvgPool:0")
+            feed_dict = {input_layer: batch}
             if i is 0:
                 prob = sess.run(
-                    prob_tensor, feed_dict=feed_dict).reshape(
+                    output_layer, feed_dict=feed_dict).reshape(
                     batch_size, 1536)
             else:
                 prob = np.append(
                     prob,
                     sess.run(
-                        prob_tensor,
+                        output_layer,
                         feed_dict=feed_dict).reshape(
                         batch_size,
                         1536),
@@ -83,22 +94,22 @@ def forward_pass():
                 print "Progress:" + str(((i + 1) / float(n_batch) * 100)) + "%\n"
     print "Progress:" + str(((n_batch) / float(n_batch) * 100)) + "%\n"
     print
-    print "Saving Features : features.np\n"
-    np.save('features', prob)
+    print "Saving Features : features.npy\n"
+    np.save('Dataset/features', prob)
 
 
-def get_features(path):
-    image = load_image(path)
-    with tf.Session() as sess:
-        init = tf.global_variables_initializer()
-        sess.run(init)
-        image = image.reshape((1, 299, 299, 3))
-        assert image.shape == (1, 299, 299, 3)
-        feed_dict = {graph.get_tensor_by_name("import/InputImage:0"): image}
-        prob_tensor = graph.get_tensor_by_name(
-            "import/InceptionV4/Logits/AvgPool_1a/AvgPool:0")
-        prob = sess.run(prob_tensor, feed_dict=feed_dict)
-    return prob
+def init_CNN():
+    sess=tf.Session()
+    init = tf.global_variables_initializer()
+    sess.run(init)
+    return sess
+
+def get_features(sess, img):
+    image = load_image(img)
+    image = image.reshape((1, 299, 299, 3))
+    feed_dict = {input_layer: image}
+    prob = sess.run(output_layer, feed_dict=feed_dict)
+    return prob[0][0]
 
 if __name__ == "__main__":
     print "#Images:", len(files)
