@@ -1,6 +1,6 @@
 # Image Caption Generator
 ### Work in Progress
-Updates(Mar 12, 2017):
+######Updates(Mar 12, 2017):
 1. Added Dropout Layer for LSTM, Xavier Glorot Initializer for Weights
 2. Significant Optimizations for Caption Generation i.e Decode Routine, computation time reduce from 3 seconds to 0.2 seconds
 3. Functionality to Freeze Graphs and Merge them.
@@ -8,14 +8,14 @@ Updates(Mar 12, 2017):
 5. Explored and chose the fastest and most efficient Image Preprocessing Method.
 5. Ported code to TensorFlow r1.0
 
-Updates(Feb 27, 2017):
+######Updates(Feb 27, 2017):
 1. Added BLEU evaluation metric and batch processing of images to produce batches of captions.
 
-Updates(Feb 25, 2017):
+######Updates(Feb 25, 2017):
 1. Added optimizations and one-time pre-processing of Flickr30K data
 2. Changed to a faster Image Preprocessing method using OpenCV
 
-Upcoming:
+######Upcoming:
 1. FIFO-queues in training
 2. Attention-Model
 3. Trained Models for Distribution.
