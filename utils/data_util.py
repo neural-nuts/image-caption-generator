@@ -42,7 +42,7 @@ def generate_vocab(df):
     for word in vocab.keys():
         if word not in ["<S>", "</S>", "<PAD>", "<UNK>"]:
             wtoidx[word] = i
-            i+=1
+            i += 1
     print "Size of Vocabulary", len(vocab)
     return vocab, wtoidx
 
@@ -70,37 +70,40 @@ def load_features(feature_path):
     print "Features Loaded", feature_path
     return features
 
+
 def split_dataset(df, features, ratio=0.8):
-    split_idx = int(df.shape[0]*ratio)
+    split_idx = int(df.shape[0] * ratio)
     print "Data Statistics:"
     print "# Records Total Data: ", df.shape[0]
     print "# Records Training Data: ", split_idx
-    print "# Records Training Data: ", df.shape[0]-split_idx
-    print "Ration of Training: Validation = ", ratio*100, ":", 100-(ratio*100)
+    print "# Records Training Data: ", df.shape[0] - split_idx
+    print "Ration of Training: Validation = ", ratio * 100, ":", 100 - (ratio * 100)
     val_features = features[split_idx:]
     val_captions = np.array(df.caption)[split_idx:]
-    np.save("Dataset/Validation_Data",zip(val_features, val_captions))
+    np.save("Dataset/Validation_Data", zip(val_features, val_captions))
     return df[:split_idx], features[:split_idx]
 
+
 def get_data(required_files):
-    ret=[]
-    for fil in required_files[:-1]:
-        ret.append(np.load("Dataset/"+fil+".npy"))
+    ret = []
+    for fil in required_files:
+        ret.append(np.load("Dataset/" + fil + ".npy"))
     return ret
+
 
 def generate_captions(
         wt=2,
         ml=20,
         cap_path='Dataset/results_20130124.token',
         feat_path='Dataset/features.npy'):
-    required_files = ["vocab", "wordmap", "Training_Data", "Validation_Data"]
+    required_files = ["vocab", "wordmap", "Training_Data"]
     generate = False
     for fil in required_files:
-        if not os.path.isfile('Dataset/'+fil+".npy"):
+        if not os.path.isfile('Dataset/' + fil + ".npy"):
             generate = True
             print "Required Files not present. Regenerating Data."
             break
-    if generate == False:
+    if not generate:
         print "Dataset Present; Skipping Generation."
         return get_data(required_files)
     global max_len, word_threshold, counter
@@ -114,19 +117,19 @@ def generate_captions(
     df = preprocess_captions(filenames, captions)
     features = load_features(feat_path)
     idx = np.random.permutation(features.shape[0])
-    df=df.iloc[idx]
-    features=features[idx]
-    df, features = split_dataset(df, features)
+    df = df.iloc[idx]
+    features = features[idx]
+    # df, features = split_dataset(df, features) #use flickr8k for
+    # validationSSS
     counter = Counter()
     for i, row in df.iterrows():
         counter.update(row["caption"].lower().split())
     df = pad_captions(df)
     vocab, wtoidx = generate_vocab(df)
     captions = np.array(df.caption)
-    np.save("Dataset/Training_Data",zip(features,captions))
+    np.save("Dataset/Training_Data", zip(features, captions))
     np.save("Dataset/wordmap", wtoidx)
     np.save("Dataset/vocab", vocab)
 
     print "Preprocessing Complete"
     return get_data(required_files)
-

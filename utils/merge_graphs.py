@@ -1,0 +1,65 @@
+import os
+import argparse
+import tensorflow as tf
+from tensorflow.python.framework import graph_util
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--encpb", type=str, help="ProtoBuf File of Decoder")
+parser.add_argument("--decpb", type=str, help="ProtoBuf File of Encoder")
+args = parser.parse_args()
+
+with open(args.encpb, 'rb') as f:
+    fileContent = f.read()
+graph_def = tf.GraphDef()
+graph_def.ParseFromString(fileContent)
+tf.import_graph_def(
+    graph_def,
+    input_map=None,
+    return_elements=None,
+    name='encoder',
+    op_dict=None,
+    producer_op_list=None)
+graph = tf.get_default_graph()
+
+
+with open(args.decpb, 'rb') as f:
+    fileContent = f.read()
+
+graph_def = tf.GraphDef()
+graph_def.ParseFromString(fileContent)
+tf.import_graph_def(
+    graph_def,
+    input_map=None,
+    return_elements=None,
+    name='decoder',
+    op_dict=None,
+    producer_op_list=None)
+graph = tf.get_default_graph()
+tensors_decoder = [n.name for n in tf.get_default_graph().as_graph_def().node]
+
+output_node_names = [
+    "encoder/Preprocessed_JPG",
+    "encoder/Preprocessed_PNG",
+    "encoder/import/InceptionV4/Logits/AvgPool_1a/AvgPool"]
+
+with open("../model/Decoder/DecoderOutputs.txt", 'r') as f:
+    output = f.read()
+    prefix = "decoder/"
+    output_node_names += [prefix + o for o in output.split('\n')[:-1]]
+
+
+input_graph_def = graph.as_graph_def()
+
+with tf.Session() as sess:
+    init = tf.global_variables_initializer()
+    sess.run(init)
+    output_graph_def = graph_util.convert_variables_to_constants(
+        sess,
+        input_graph_def,
+        output_node_names)
+
+output_graph = "../model/Trained_Graphs/merged_frozen_graph.pb"
+
+with tf.gfile.GFile(output_graph, "wb") as f:
+    f.write(output_graph_def.SerializeToString())
+print "Merged ProtoBuf File Saved:", output_graph
