@@ -1,4 +1,7 @@
 # Image Caption Generator
+
+A Neural Network based generative model for captioning images.
+
 ### Work in Progress
 ######Updates(Mar 12, 2017):
 1. Added Dropout Layer for LSTM, Xavier Glorot Initializer for Weights
@@ -19,8 +22,6 @@
 1. FIFO-queues in training
 2. Attention-Model
 3. Trained Models for Distribution.
-
-A Neural Network based generative model for captioning images.
 
 ##Pre-Requisites:
 1. Tensorflow r1.0
