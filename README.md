@@ -48,18 +48,23 @@ Show and Tell: A Neural Image Caption Generator
 Protected Under BSD-3 Clause License.
 
 ## Some Examples:
+
 ![Alt text](/Images/gen_3126981064.jpg)
 ![Alt text](/Images/gen_7148046575.jpg)
+![Alt text](/Images/gen_suitselfie.png)
+![Alt text](/Images/gen_6.png)
 ![Alt text](/Images/gen_7526599338.jpg)
 ![Alt text](/Images/gen_4013421575.jpg)
-![Alt text](/Images/gen_3273757324.jpg)
+![Alt text](/Images/gen_football.png)
+![Alt text](/Images/gen_plane.png)
+![Alt text](/Images/gen_comp.png)
+![Alt text](/Images/gen_womanbeach.png)
 ![Alt text](/Images/gen_102617084.jpg)
 ![Alt text](/Images/gen_2230458748.jpg)
 ![Alt text](/Images/gen_7125476937.jpg)
-![Alt text](/Images/gen_532999240.jpg)
 ![Alt text](/Images/gen_4752984291.jpg)
+![Alt text](/Images/gen_cat2.png)
 ![Alt text](/Images/gen_283252248.jpg)
 ![Alt text](/Images/gen_3920626767.jpg)
-![Alt text](/Images/gen_2472980433.jpg)
-![Alt text](/Images/gen_2537697530.jpg)
+![Alt text](/Images/gen_manlaptop.png)
 ![Alt text](/Images/gen_2461372011.jpg)
