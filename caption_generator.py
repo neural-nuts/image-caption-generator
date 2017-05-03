@@ -1,6 +1,8 @@
+import matplotlib.pyplot as plt
 from random import shuffle
 from convfeatures import *
 import tensorflow as tf
+from PIL import Image
 import numpy as np
 import pickle
 import sys
@@ -57,6 +59,7 @@ class Caption_Generator():
             self.idxtow = dict(zip(self.wtoidx.values(), self.wtoidx.keys()))
             self.model()
             self.image_features, self.IDs = self.build_decode_graph()
+            self.load_image=config.load_image
             if not self.batch_decode:
                 self.io = build_prepro_graph()
                 self.sess = self.init_decode()
@@ -226,6 +229,7 @@ class Caption_Generator():
                 pred_ID = tf.nn.embedding_lookup(
                     self.word_embedding['weights'], predicted_next_idx)
                 pred_ID = pred_ID + self.word_embedding['biases']
+                predicted_next_idx = tf.cast(predicted_next_idx, tf.int32, name="word_"+str(i))
                 IDs.append(predicted_next_idx)
 
         with open("model/Decoder/DecoderOutputs.txt", 'w') as f:
@@ -254,7 +258,6 @@ class Caption_Generator():
             print "Initializing Training"
             init = tf.global_variables_initializer()
             sess.run(init)
-
             if self.resume is 1:
                 print "Loading Previously Trained Model"
                 print self.current_epoch, "Out of", self.nb_epochs, "Completed in previous run."
@@ -268,7 +271,9 @@ class Caption_Generator():
                     sys.exit(0)
             writer = tf.summary.FileWriter(
                 "model/log_dir/", graph=tf.get_default_graph())
+
             for epoch in range(self.current_epoch, self.nb_epochs):
+                loss=[]
                 idx = np.random.permutation(self.features.shape[0])
                 self.captions = self.captions[idx]
                 self.features = self.features[idx]
@@ -284,16 +289,16 @@ class Caption_Generator():
                     writer.add_summary(summary, step)
                     if step % 100 == 0:
                         print epoch, ": Global Step:", step, "\tLoss: ", current_loss
-
+                    loss.append(current_loss)
                 print
-                print "Epoch: ", epoch, "\tCurrent Loss: ", current_loss
+                print "Epoch: ", epoch, "\tAverage Loss: ", np.mean(loss)
                 print "\nSaving Model..\n"
                 saver.save(sess, "./model/model.ckpt", global_step=global_step)
                 np.save("model/save", (epoch, step))
 
     def init_decode(self):
         saver = tf.train.Saver()
-        ckpt_file = "./model/model.ckpt-" + str(self.current_step)
+        ckpt_file = "./model/model.ckpt-" + str(self.current_step) #str(89994)
         sess = tf.Session()
         init = tf.global_variables_initializer()
         sess.run(init)
@@ -307,30 +312,40 @@ class Caption_Generator():
                 self.image_features: features})
         sentence = " ".join(self.IDs_to_Words(self.idxtow, caption_IDs))
         sentence = sentence.split("</S>")[0]
-        print "Caption:", sentence
-        print
+        if self.load_image:
+            plt.imshow(Image.open(path))
+            plt.axis("off")
+            plt.title(sentence, fontsize='10', loc='left')
+            name=path.split("/")[-1]
+            plt.savefig("./results/"+"gen_"+name)
+            plt.show()
+        else:
+            print sentence
         if self.savedecoder:
             saver = tf.train.Saver()
             saver.save(self.sess, "model/Decoder/model.ckpt")
 
-    def batch_decode(self, features):
+        #return path, sentence
+
+    def batch_decoder(self, filenames, features):
         saver = tf.train.Saver()
         ckpt_file = "./model/model.ckpt-" + str(self.current_step)
         sentences = []
-        with tf.Session() as sess:
-            init = tf.global_variables_initializer()
-            sess.run(init)
-            saver.restore(sess, ckpt_file)
-            for i, feat in enumerate(features[:100]):
-                feat = np.reshape(feat, newshape=(1, 1536))
-                caption_IDs = sess.run(
-                    self.IDs, feed_dict={
-                        self.image_features: feat})
-                sentence = " ".join(
-                    self.IDs_to_Words(
-                        self.idxtow, caption_IDs))
-                sentence = sentence.split("</S>")[0]
-                sentences.append(sentence)
-                if i % 1000 == 0:
-                    print "Progress", i, "out of", features.shape[0]
-        return sentences
+        filenames = np.unique(filenames)
+        with open("model/Decoder/Generated_Captions.txt", 'w') as f:
+            with tf.Session() as sess:
+                init = tf.global_variables_initializer()
+                sess.run(init)
+                saver.restore(sess, ckpt_file)
+                for i, feat in enumerate(features):
+                    feat = np.reshape(feat, newshape=(1, 1536))
+                    caption_IDs = sess.run(
+                        self.IDs, feed_dict={
+                            self.image_features: feat})
+                    sentence = " ".join(
+                        self.IDs_to_Words(
+                            self.idxtow, caption_IDs))
+                    sentence = sentence.split("</S>")[0]
+                    if i % 1000 == 0:
+                        print "Progress", i, "out of", features.shape[0]
+                    f.write(filenames[i] + "\t" + sentence + "\n")

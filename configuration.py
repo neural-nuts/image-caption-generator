@@ -18,5 +18,6 @@ class Configuration():
         self.batch_decode = False
         self.mode = args["mode"]
         self.resume = args["resume"]
+        self.load_image = args.get("load_image")
         self.saveencoder = bool(args["saveencoder"])
         self.savedecoder = bool(args["savedecoder"])

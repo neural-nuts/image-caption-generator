@@ -19,7 +19,7 @@ def preprocess_captions(filenames, captions):
     df.caption = df.caption.str.decode('utf')
     df['caption'] = df['caption'].apply(word_tokenize).apply(
         lambda x: x[:max_len]).apply(" ".join).str.lower()
-    df = df[:158900]
+    #df = df[:158900] #uncomment if flickr
     return df
 
 

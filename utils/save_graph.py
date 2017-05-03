@@ -4,19 +4,23 @@ import tensorflow as tf
 from tensorflow.python.framework import graph_util
 
 
-def freeze_graph(mode, model_folder):
+def freeze_graph(mode, read_file ,model_folder):
 
     checkpoint = tf.train.get_checkpoint_state(model_folder)
     input_checkpoint = checkpoint.model_checkpoint_path
     absolute_model_folder = "/".join(input_checkpoint.split('/')[:-1])
     output_graph = "../model/Trained_Graphs/" + mode + "_frozen_model.pb"
     if mode == 'encoder':
-        output_node_names = [
-            "Preprocessed_JPG",
-            "Preprocessed_PNG",
-            "import/InceptionV4/Logits/AvgPool_1a/AvgPool"]
+        if read_file==1:
+            output_node_names = [
+                "Preprocessed_JPG",
+                "Preprocessed_PNG",
+                "Output_Features"]
+        else:
+            print "without file I/O"
+            output_node_names = ["Output_Features"]
     if mode == 'decoder':
-        with open("DecoderOutputs.txt", 'r') as f:
+        with open("../model/Decoder/DecoderOutputs.txt", 'r') as f:
             output_node_names = f.read()
             output_node_names = output_node_names.split('\n')[:-1]
 
@@ -45,5 +49,9 @@ if __name__ == '__main__':
         "--model_folder",
         type=str,
         help="Model folder to export")
+    parser.add_argument(
+        "--read_file",
+        type=int,
+        help="Reading from File?", default=1)
     args = parser.parse_args()
-    freeze_graph(args.mode, args.model_folder)
+    freeze_graph(args.mode, args.read_file, args.model_folder)

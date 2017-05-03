@@ -2,12 +2,13 @@ import tensorflow as tf
 import numpy as np
 import os
 
-
-img_path = "Dataset/flickr30k-images/"
-files = sorted(np.array(os.listdir("Dataset/flickr30k-images/")))
-
 batch_size = 10
-n_batch = len(files) / batch_size
+img_path = "Dataset/flickr30k-images/"
+try:
+    files = sorted(np.array(os.listdir("Dataset/flickr30k-images/")))
+    n_batch = len(files) / batch_size
+except:
+    pass
 
 with open('ConvNets/inception_v4.pb', 'rb') as f:
     fileContent = f.read()
@@ -20,6 +21,7 @@ graph = tf.get_default_graph()
 input_layer = graph.get_tensor_by_name("import/InputImage:0")
 output_layer = graph.get_tensor_by_name(
     "import/InceptionV4/Logits/AvgPool_1a/AvgPool:0")
+
 
 
 '''
@@ -53,7 +55,7 @@ def old_load_image(x, new_h=299, new_w=299):
 
 
 def build_prepro_graph():
-    input_file = tf.placeholder(dtype=tf.string, name="InputImage")
+    input_file = tf.placeholder(dtype=tf.string, name="InputFile")
     image_file = tf.read_file(input_file)
     jpg = tf.image.decode_jpeg(image_file, channels=3)
     png = tf.image.decode_png(image_file, channels=3)
@@ -82,8 +84,8 @@ def load_next_batch(sess, io):
         batch = batch.reshape((batch_size, 299, 299, 3))
         yield batch
 
-
 def forward_pass(io):
+    global output_layer
     with tf.Session() as sess:
         init = tf.global_variables_initializer()
         sess.run(init)
@@ -114,6 +116,8 @@ def forward_pass(io):
 
 
 def get_features(sess, io, img, saveencoder=False):
+    global output_layer
+    output_layer = tf.reshape(output_layer, [1,1536], name="Output_Features")
     image = load_image(sess, io, img)
     feed_dict = {input_layer: image}
     prob = sess.run(output_layer, feed_dict=feed_dict)
@@ -125,7 +129,7 @@ def get_features(sess, io, img, saveencoder=False):
                 f.write(t + "\n")
         saver = tf.train.Saver()
         saver.save(sess, "model/Encoder/model.ckpt")
-    return prob[0][0]
+    return prob
 
 if __name__ == "__main__":
     print "#Images:", len(files)

@@ -3,6 +3,7 @@ from utils.data_util import generate_captions
 from configuration import Configuration
 import os
 import argparse
+import json
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
@@ -69,30 +70,18 @@ elif config.mode == "test":
 elif config.mode == "eval":
     config.mode = "test"
     config.batch_decode = True
-    if os.path.exists(args["validation_data"]):
-        validation_data = np.load(args["validation_data"])
-        features, captions = validation_data[:, 0], validation_data[:, 1]
+    print args.validation_data
+    if os.path.exists(args.validation_data):
+        features = np.load(args.validation_data)
+        #with open("Dataset/Validation_Captions.txt") as f:
+        #    data = f.readlines()
+        with open("Dataset/image_info_test2014.json",'r') as f:
+            data=json.load(f)
+
+        #filenames = [caps.split('\t')[0].split('#')[0] for caps in data]
+        filenames  = sorted([d["file_name"].split('.')[0] for d in data['images']])
+        #captions = [caps.replace('\n', '').split('\t')[1] for caps in data]
+        #features, captions = validation_data[:, 0], validation_data[:, 1]
         features = np.array([feat.astype(float) for feat in features])
         model = Caption_Generator(config)
-        generated_captions = model.batch_decode(features)
-        with open("Dataset/Val_Generated_Captions.txt", 'w') as f:
-            for cap in generated_captions:
-                f.write(cap + "\n")
-        path_to_reference = 'Dataset/Val_Captions' # df -> image_id:str     caption:str     len(5000)
-        path_to_model = 'Dataset/Val_Generated_Captions.txt'
-        with open(path_to_model) as f:
-            model_summaries = f.readlines()
-
-        df = pd.read_pickle(path_to_reference)
-        df = pd.DataFrame(data = {'image':list(df.images.unique()),'caption':list(df.groupby('image')['caption'].apply(list))})
-        #df -> image_id:str     caption: list of str    len(1000)
-        bleu_scores = []
-
-        for i, row in df.iterrows():
-            model = model_summaries[i]
-            reference = row.caption
-            bleu_scores.append(nltk.translate.bleu_score.sentence_bleu(reference, model, weights=[0.4,0.3,0.2]))
-
-        print "Mean BLEU score: ", np.mean(bleu_score)
-    else:
-        print "Please provide a valid path to Validation Data.\n Usage:\n python main.py --mode eval --validation_data VALID_PATH"
+        generated_captions = model.batch_decoder(filenames, features)

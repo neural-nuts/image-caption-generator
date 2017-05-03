@@ -1,0 +1,16 @@
+24.6913580247 %  done
+Invalid Caption Generated for:  COCO_train2014_000000183988
+49.3827160494 %  done
+74.0740740741 %  done
+98.7654320988 %  done
+
+Mean Sentence-Level BLEU-1 score:  0.675701057637
+Mean Sentence-Level BLEU-2 score:  0.502045701894
+Mean Sentence-Level BLEU-3 score:  0.472399544356
+Mean Sentence-Level BLEU-4 score:  0.503704015943
+
+
+Corpus-Level BLEU-1 score:  0.680945536216
+Corpus-Level BLEU-2 score:  0.473736538727
+Corpus-Level BLEU-3 score:  0.327219332641
+Corpus-Level BLEU-4 score:  0.228155010438
