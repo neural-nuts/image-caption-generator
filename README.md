@@ -32,8 +32,9 @@ A Neural Network based generative model for captioning images.
 
 ## Procedure to Run:
 1. Clone the Repository to preserve Directory Structure
-1. Put results_20130124.token and Flickr30K images in Dataset Folder.
-2. Put inception_v4.pb in ConvNets folder
+2. Put results_20130124.token and Flickr30K images in dataset folder.
+3. Put inception_v4.pb in ConvNets folder
+4. Generate features(features.npy) corresponding to the images in the dataset folder by running:  python convfeatures.py .
 3. To Train the model run main.py with --mode train and --resume 0 or 1. 
 4. To Generate Captions for an Image run main.py with --mode test and --image_path VALID_PATH.
 
