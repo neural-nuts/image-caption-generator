@@ -2,6 +2,7 @@
 
 A Neural Network based generative model for captioning images.
 
+Checkout the android app made using this image-captioning-model: [Cam2Caption](https://github.com/neural-nuts/Cam2Caption)
 ### Work in Progress
 ###### Updates(Mar 12, 2017):
 1. Added Dropout Layer for LSTM, Xavier Glorot Initializer for Weights
