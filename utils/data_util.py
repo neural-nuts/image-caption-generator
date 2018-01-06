@@ -145,7 +145,7 @@ def generate_captions(
         ml=20,
         cap_path='Dataset/results_20130124.token',
         feat_path='Dataset/features.npy',
-        dataset=None):
+        data_is_coco=False):
     required_files = ["vocab", "wordmap", "Training_Data"]
     generate = False
     for fil in required_files:
@@ -160,7 +160,7 @@ def generate_captions(
     max_len = ml
     word_threshold = wt
     print "Loading Caption Data", cap_path
-    if dataset:
+    if data_is_coco:
         # Prepare COCO captions in Flickr format
         prepare_coco_captions()
         # Load the COCO captions data
