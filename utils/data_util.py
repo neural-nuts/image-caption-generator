@@ -3,14 +3,63 @@ import pandas as pd
 from collections import Counter
 from nltk.tokenize import word_tokenize
 import pickle
+import json
 import os
 
 max_len = 20
 word_threshold = 2
 counter = None
 
+def prepare_coco_captions(filename="Dataset/captions_val2014.json"):
+    '''
+    Prepare COCO Captions in the Flickr annotation file format
+    '''
+    with open(filename, 'r') as f:
+        data = json.load(f)
+    images = data['images']
+    captions = data['annotations']
+    prefix = "COCO_train2014_"
 
-def preprocess_captions(filenames, captions):
+    for cap in captions:
+        image_id = str(cap['image_id'])
+        len_id = len(image_id)
+        zeros = '0'*(12-len_id)
+        image_id = prefix+zeros+image_id
+        cap['image_id'] = image_id
+        cap['caption'] = cap['caption'].replace('\n','')\
+                        .replace(',', ' ,').replace('.', '')\
+                        .replace('"','" ').replace("'s"," 's")\
+                        .replace("'t"," 't")+ " ."
+    
+    captions = sorted(captions, key=lambda k: k['image_id'])
+    
+    with open("Dataset/captions.txt",'w') as f:
+        for i, cap in enumerate(captions):
+            f.write(cap['image_id']+'#'+str(i%5)+'\t'+cap['caption']+'\n')
+
+    return
+
+def preprocess_coco_captions(filenames, captions):
+    df = pd.DataFrame()
+    df['FileNames'] = filenames
+    df['caption'] = captions
+    df.caption = df.caption.str.decode('utf')
+    df['caption'] = df['caption'].apply(word_tokenize).apply(lambda x: x[:20]).apply(" ".join).str.lower()
+
+    anomalies = df.FileNames.value_counts()[(df.FileNames.value_counts() > 5)].index.tolist()
+
+    for name in anomalies:
+        indexes = df[df.FileNames==name].index[5:]
+        df = df.drop(indexes)
+        df = df.reset_index(drop=True)
+
+    with open("captions.txt",'w') as f:
+        for i, row in df.iterrows():
+            f.write(row['FileNames']+'#'+str(i%5)+'\t'+row['caption']+'\n')
+
+    return df
+
+def preprocess_flickr_captions(filenames, captions):
     global max_len
     print "Preprocessing Captions"
     df = pd.DataFrame()
@@ -95,7 +144,8 @@ def generate_captions(
         wt=2,
         ml=20,
         cap_path='Dataset/results_20130124.token',
-        feat_path='Dataset/features.npy'):
+        feat_path='Dataset/features.npy',
+        data_is_coco=False):
     required_files = ["vocab", "wordmap", "Training_Data"]
     generate = False
     for fil in required_files:
@@ -110,11 +160,22 @@ def generate_captions(
     max_len = ml
     word_threshold = wt
     print "Loading Caption Data", cap_path
-    with open(cap_path, 'r') as f:
-        data = f.readlines()
-    filenames = [caps.split('\t')[0].split('#')[0] for caps in data]
-    captions = [caps.replace('\n', '').split('\t')[1] for caps in data]
-    df = preprocess_captions(filenames, captions)
+    if data_is_coco:
+        # Prepare COCO captions in Flickr format
+        prepare_coco_captions()
+        # Load the COCO captions data
+        with open(cap_path, 'r') as f:
+            data = f.readlines()
+        filenames = [caps.split('\t')[0].split('#')[0] for caps in data]
+        captions = [caps.split('\t')[1] for caps in data]
+        df = preprocess_coco_captions(filenames, captions)
+    else:
+        with open(cap_path, 'r') as f:
+            data = f.readlines()
+        filenames = [caps.split('\t')[0].split('#')[0] for caps in data]
+        captions = [caps.replace('\n', '').split('\t')[1] for caps in data]
+        df = preprocess_flickr_captions(filenames, captions)
+        
     features = load_features(feat_path)
     idx = np.random.permutation(features.shape[0])
     df = df.iloc[idx]
