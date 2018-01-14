@@ -48,7 +48,7 @@ Checkout the android app made using this image-captioning-model: [Cam2Caption](h
     - For MSCOCO: `python main.py --mode train --caption_path ./Dataset/captions_val2014.json --feature_path ./Dataset/features.npy --data_is_coco --resume`
 4. To Generate Captions for an Image run
     - `python main.py --mode test --image_path VALID_PATH`
-5. For usage as a python library see (Demo.ipynb)[https://github.com/neural-nuts/image-caption-generator/blob/master/Demo.ipynb]
+5. For usage as a python library see [Demo.ipynb](https://github.com/neural-nuts/image-caption-generator/blob/master/Demo.ipynb)
 
 (see `python main.py -h` for more)
 
@@ -58,7 +58,7 @@ Checkout the android app made using this image-captioning-model: [Cam2Caption](h
 1. It's necessary to save both encoder and decoder graphs while running test. This is a one-time necessary run before freezing the encoder/decoder.
     - `python main.py --mode test --image_path ANY_TEST_IMAGE.jpg/png --saveencoder --savedecoder`
 2. In the project root directory use - `python utils/save_graph.py --mode encoder --model_folder model/Encoder/` additionally you may want to use `--read_file` if you want to freeze the encoder for directly generating caption for an image file(path). Similarly, for decoder use - `python utils/save_graph.py --mode decoder --model_folder model/Decoder/`, read_file argument is not necessary for the decoder.
-3. To use frozen encoder and decoder models as dual blackbox (Serve-DualProtoBuf.ipynb)[https://github.com/neural-nuts/image-caption-generator/blob/master/utils/Serve-DualProtoBuf.ipynb]. Note: You must freeze encoder graph with --read_file to run this notebook
+3. To use frozen encoder and decoder models as dual blackbox [Serve-DualProtoBuf.ipynb](https://github.com/neural-nuts/image-caption-generator/blob/master/utils/Serve-DualProtoBuf.ipynb). Note: You must freeze encoder graph with --read_file to run this notebook
 
 (see `python utils/save_graph.py -h` for more)
 
@@ -66,7 +66,7 @@ Checkout the android app made using this image-captioning-model: [Cam2Caption](h
 1. It's necessary to freeze the encoder and decoder as mentioned above.
 2. In the project root directory run-
     - `python utils/merge_graphs.py --encpb ./model/Trained_Graphs/encoder_frozen_model.pb --decpb ./model/Trained_Graphs/encoder_frozen_model.pb` additionally you may want to use `--read_file` if you want to freeze the encoder for directly generating caption for an image file(path).
-3. To use merged encoder and decoder models as single frozen blackbox: (Serve-SingleProtoBuf.ipynb)[https://github.com/neural-nuts/image-caption-generator/blob/master/utils/Serve-SingleProtoBuf.ipynb]. Note: You must freeze and merge encoder graph with --read_file to run this notebook
+3. To use merged encoder and decoder models as single frozen blackbox: [Serve-SingleProtoBuf.ipynb](https://github.com/neural-nuts/image-caption-generator/blob/master/utils/Serve-SingleProtoBuf.ipynb). Note: You must freeze and merge encoder graph with --read_file to run this notebook
 
 (see `python utils/merge_graphs.py -h` for more)
 
