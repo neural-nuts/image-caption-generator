@@ -11,7 +11,7 @@ def freeze_graph(mode, read_file ,model_folder):
     absolute_model_folder = "/".join(input_checkpoint.split('/')[:-1])
     output_graph = "../model/Trained_Graphs/" + mode + "_frozen_model.pb"
     if mode == 'encoder':
-        if read_file==1:
+        if read_file:
             output_node_names = [
                 "Preprocessed_JPG",
                 "Preprocessed_PNG",
@@ -44,14 +44,13 @@ def freeze_graph(mode, read_file ,model_folder):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("--mode", type=str, help="encoder/decoder")
+    parser.add_argument("--mode", type=str, choices=["encoder","decoder"])
     parser.add_argument(
         "--model_folder",
         type=str,
         help="Model folder to export")
     parser.add_argument(
         "--read_file",
-        type=int,
-        help="Reading from File?", default=1)
+        action="store_true")
     args = parser.parse_args()
     freeze_graph(args.mode, args.read_file, args.model_folder)

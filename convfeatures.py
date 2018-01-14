@@ -1,60 +1,25 @@
 import tensorflow as tf
 import numpy as np
+import argparse
 import os
 
 batch_size = 10
-img_path = "Dataset/flickr30k-images/"
-try:
-    files = sorted(np.array(os.listdir("Dataset/flickr30k-images/")))
-    n_batch = len(files) / batch_size
-except:
-    pass
+files, input_layer, output_layer = [None]*3
 
-with open('ConvNets/inception_v4.pb', 'rb') as f:
-    fileContent = f.read()
+def build_prepro_graph(inception_path):
+    global input_layer, output_layer
+    with open(inception_path, 'rb') as f:
+        fileContent = f.read()
 
-graph_def = tf.GraphDef()
-graph_def.ParseFromString(fileContent)
-tf.import_graph_def(graph_def)
-graph = tf.get_default_graph()
+    graph_def = tf.GraphDef()
+    graph_def.ParseFromString(fileContent)
+    tf.import_graph_def(graph_def)
+    graph = tf.get_default_graph()
 
-input_layer = graph.get_tensor_by_name("import/InputImage:0")
-output_layer = graph.get_tensor_by_name(
-    "import/InceptionV4/Logits/AvgPool_1a/AvgPool:0")
+    input_layer = graph.get_tensor_by_name("import/InputImage:0")
+    output_layer = graph.get_tensor_by_name(
+        "import/InceptionV4/Logits/AvgPool_1a/AvgPool:0")
 
-
-
-'''
-OLD PRE-PROCESSING MODULES : SLOW
-import cv2
-from PIL import Image
-
-def old_load_image(x, new_h=299, new_w=299):
-    image = Image.open(x)
-    h, w = image.size
-    if image.format != "PNG":
-        image = np.asarray(image)/255.0
-    else:
-        image = np.asarray(image)/255.0
-        image = image[:,:,:3]
-
-    ##To crop or not?
-    if w == h:
-        resized = cv2.resize(image, (new_h,new_w))
-    elif h < w:
-        resized = cv2.resize(image, (int(w * float(new_h)/h), new_w))
-        crop_length = int((resized.shape[1] - new_h) / 2)
-        resized = resized[:,crop_length:resized.shape[1] - crop_length]
-    else:
-        resized = cv2.resize(image, (new_h, int(h * float(new_w) / w)))
-        crop_length = int((resized.shape[0] - new_w) / 2)
-        resized = resized[crop_length:resized.shape[0] - crop_length,:]
-
-    return cv2.resize(image, (new_h, new_w))
-'''
-
-
-def build_prepro_graph():
     input_file = tf.placeholder(dtype=tf.string, name="InputFile")
     image_file = tf.read_file(input_file)
     jpg = tf.image.decode_jpeg(image_file, channels=3)
@@ -76,7 +41,7 @@ def load_image(sess, io, image):
     return sess.run(io[1], feed_dict={io[0]: image})
 
 
-def load_next_batch(sess, io):
+def load_next_batch(sess, io, img_path):
     for batch_idx in range(0, len(files), batch_size):
         batch = files[batch_idx:batch_idx + batch_size]
         batch = np.array(
@@ -84,12 +49,15 @@ def load_next_batch(sess, io):
         batch = batch.reshape((batch_size, 299, 299, 3))
         yield batch
 
-def forward_pass(io):
-    global output_layer
+def forward_pass(io, img_path):
+    global output_layer, files
+    files = sorted(np.array(os.listdir(img_path)))
+    print "#Images:", len(files)
+    n_batch = len(files) / batch_size
     with tf.Session() as sess:
         init = tf.global_variables_initializer()
         sess.run(init)
-        batch_iter = load_next_batch(sess, io)
+        batch_iter = load_next_batch(sess, io, img_path)
         for i in xrange(n_batch):
             batch = batch_iter.next()
             assert batch.shape == (batch_size, 299, 299, 3)
@@ -131,9 +99,25 @@ def get_features(sess, io, img, saveencoder=False):
         saver.save(sess, "model/Encoder/model.ckpt")
     return prob
 
+def get_arguments():
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--data_path",
+        type=str,
+        help="A valid path to MSCCOCO/flickr30k images(unzipped)",
+        required=True)
+    parser.add_argument(
+        "--inception_path",
+        type=str,
+        help="A valid path to inception_v4.pb",
+        required=True)
+    args = parser.parse_args()
+    return args
+
 if __name__ == "__main__":
-    print "#Images:", len(files)
+    args=get_arguments()
+
     print "Extracting Features"
-    io = build_prepro_graph()
-    forward_pass(io)
+    io = build_prepro_graph(args.inception_path)
+    forward_pass(io, args.data_path)
     print "done"

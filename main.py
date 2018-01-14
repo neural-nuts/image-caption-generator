@@ -1,7 +1,7 @@
 from caption_generator import *
 from utils.data_util import generate_captions
 from configuration import Configuration
-import os
+import os, sys
 import argparse
 import json
 
@@ -17,42 +17,52 @@ parser.add_argument(
     required=True)
 parser.add_argument(
     "--resume",
-    type=int,
-    help="1=Yes|0=No",
-    choices=[
-        1,
-        0],
-    default=0)
+    help="make model training resumable",
+    action="store_true")
+parser.add_argument(
+    "--caption_path",
+    type=str,
+    help="A valid path to COCO/flickr30k caption file: results_20130124.token/captions_val2014.json")
+parser.add_argument(
+    "--feature_path",
+    type=str,
+    help="A valid path to COCO/flickr30k image features: features.npy")
+parser.add_argument(
+    "--data_is_coco",
+    help="Is dataset MSCOCO? converts COCO caption data to flickr30k format",
+    action="store_true")
+parser.add_argument(
+    "--inception_path",
+    type=str,
+    help="A valid path to inception_v4.pb",
+    default="ConvNets/inception_v4.pb")
 parser.add_argument(
     "--saveencoder",
-    type=int,
-    help="1=Yes|0=No",
-    choices=[
-        1,
-         0])
+    help="Save Decoder graph in model/Encoder/",
+    action="store_true")
 parser.add_argument(
     "--savedecoder",
-    type=int,
-    help="1=Yes|0=No",
-    choices=[
-        1,
-         0])
+    help="Save Decoder graph in model/Decoder/",
+    action="store_true")
 parser.add_argument(
     "--image_path",
     type=str,
-    help="Path to the Image for Generation of Captions")
+    help="If mode is test then, Path to the Image for Generation of Captions")
+parser.add_argument(
+    "--load_image",
+    help="If mode is test then, displays and stores image with generated caption",
+    action="store_true")
 parser.add_argument(
     "--validation_data",
     type=str,
-    help="Path to the Validation Data for evaluation")
+    help="If mode is eval then, Path to the Validation Data for evaluation")
 args = parser.parse_args()
 config = Configuration(vars(args))
 
 if config.mode == "train":
-    caption_file = 'Dataset/results_20130124.token'
-    feature_file = 'Dataset/features.npy'
     vocab, wtoidx, training_data = generate_captions(
-        config.word_threshold, config.max_len, caption_file, feature_file)
+        config.word_threshold, config.max_len, args.caption_path, args.feature_path,
+        config.data_is_coco)
     features, captions = training_data[:, 0], training_data[:, 1]
     features = np.array([feat.astype(float) for feat in features])
     data = (vocab.tolist(), wtoidx.tolist(), features, captions)

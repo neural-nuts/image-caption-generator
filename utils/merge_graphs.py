@@ -8,8 +8,7 @@ parser.add_argument("--encpb", type=str, help="ProtoBuf File of Decoder")
 parser.add_argument("--decpb", type=str, help="ProtoBuf File of Encoder")
 parser.add_argument(
     "--read_file",
-    type=int,
-    help="Reading from File?", default=1)
+    action="store_true")
 args = parser.parse_args()
 
 with open(args.encpb, 'rb') as f:

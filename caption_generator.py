@@ -61,7 +61,7 @@ class Caption_Generator():
             self.image_features, self.IDs = self.build_decode_graph()
             self.load_image=config.load_image
             if not self.batch_decode:
-                self.io = build_prepro_graph()
+                self.io = build_prepro_graph(config.inception_path)
                 self.sess = self.init_decode()
             return
 
