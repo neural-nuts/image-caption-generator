@@ -2,7 +2,8 @@
 
 A Neural Network based generative model for captioning images.
 
-Checkout the android app made using this image-captioning-model: [Cam2Caption](https://github.com/neural-nuts/Cam2Caption)
+Checkout the android app made using this image-captioning-model: [Cam2Caption](https://github.com/neural-nuts/Cam2Caption) and [the associated paper](http://ieeexplore.ieee.org/document/8272660/).
+
 ### Work in Progress
 
 ###### Updates(Jan 14, 2018):
@@ -74,6 +75,18 @@ Checkout the android app made using this image-captioning-model: [Cam2Caption](h
 1. `tensorboard --logdir model/log_dir`
 2. Navigate to `localhost:6006`
 
+## Citation:
+
+If you use our model or code in your research, please cite the paper:
+
+```
+@article{Mathur2017,
+  title={Camera2Caption: A Real-time Image Caption Generator},
+  author={Pranay Mathur and Aman Gill and Aayush Yadav and Anurag Mishra and Nand Kumar Bansode},
+  journal={IEEE Conference Publication},
+  year={2017}
+}
+```
 
 ## Reference:
 Show and Tell: A Neural Image Caption Generator
