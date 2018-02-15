@@ -2,7 +2,7 @@
 
 A Neural Network based generative model for captioning images.
 
-Checkout the android app made using this image-captioning-model: [Cam2Caption](https://github.com/neural-nuts/Cam2Caption) and [the associated paper](http://ieeexplore.ieee.org/document/8272660/).
+## Checkout the android app made using this image-captioning-model: [Cam2Caption](https://github.com/neural-nuts/Cam2Caption) and [the associated paper](http://ieeexplore.ieee.org/document/8272660/).
 
 ### Work in Progress
 
