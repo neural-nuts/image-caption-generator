@@ -66,7 +66,7 @@ A Neural Network based generative model for captioning images.
 ### Merging the encoder and decoder graphs for serving the model as a blackbox:
 1. It's necessary to freeze the encoder and decoder as mentioned above.
 2. In the project root directory run-
-    - `python utils/merge_graphs.py --encpb ./model/Trained_Graphs/encoder_frozen_model.pb --decpb ./model/Trained_Graphs/encoder_frozen_model.pb` additionally you may want to use `--read_file` if you want to freeze the encoder for directly generating caption for an image file(path).
+    - `python utils/merge_graphs.py --encpb ./model/Trained_Graphs/encoder_frozen_model.pb --decpb ./model/Trained_Graphs/decoder_frozen_model.pb` additionally you may want to use `--read_file` if you want to freeze the encoder for directly generating caption for an image file(path).
 3. To use merged encoder and decoder models as single frozen blackbox: [Serve-SingleProtoBuf.ipynb](https://github.com/neural-nuts/image-caption-generator/blob/master/utils/Serve-SingleProtoBuf.ipynb). Note: You must freeze and merge encoder graph with --read_file to run this notebook
 
 (see `python utils/merge_graphs.py -h` for more)
