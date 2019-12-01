@@ -1,4 +1,6 @@
-# Image Caption Generator
+# [Deprecated] Image Caption Generator
+
+**Notice: This project uses an older version of TensorFlow, and is no longer supported. Please consider using other latest alternatives.**
 
 A Neural Network based generative model for captioning images.
 
